@@ -27,5 +27,6 @@ func main() {
 	})
 
 	accounts.Routes(app)
+	tickets.Routes(app)
 	app.Listen(":6969")
 }
