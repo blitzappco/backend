@@ -8,9 +8,9 @@ import (
 
 type TicketType struct {
 	ID   string `bson:"id" json:"id"`
-	Name string `bson:"name" json:"name"`
 	City string `bson:"city" json:"city"`
 
+	Mode   string  `bson:"mode" json:"mode"`
 	Fare   float64 `bson:"fare" json:"fare"`
 	Trips  int     `bson:"trips" json:"trips"`
 	Expiry string  `bson:"expiry" json:"expiry"`

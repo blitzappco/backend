@@ -4,6 +4,7 @@ import (
 	"backend/accounts"
 	"backend/db"
 	"backend/env"
+	"backend/tickets"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -22,11 +23,12 @@ func main() {
 	db.InitDB()
 	db.InitCache()
 
-	app.Get("/", func(c *fiber.Ctx) error {
+	app.Get("/ping", func(c *fiber.Ctx) error {
 		return c.SendString("PONG")
 	})
 
 	accounts.Routes(app)
 	tickets.Routes(app)
+
 	app.Listen(":6969")
 }

@@ -4,8 +4,6 @@ import (
 	"backend/models"
 	"backend/utils"
 	"encoding/json"
-	"fmt"
-	"strconv"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/stripe/stripe-go/v78/customer"
@@ -77,18 +75,24 @@ func payments(acc fiber.Router) {
 		var account models.Account
 		utils.GetLocals(c, "account", &account)
 
-		fmt.Println(account)
+		account, err := models.GetAccount(bson.M{"id": account.ID})
+		if err != nil {
+			return utils.MessageError(c, "Nu s-a putut gasi contul")
+		}
 
-		var body map[string]string
+		var body struct {
+			Amount        int `json:"amount"`
+			PaymentMethod int `json:"paymentMethod"`
+		}
 		json.Unmarshal(c.Body(), &body)
 
-		amountToCharge, _ := strconv.Atoi(body["amount"])
-
 		params := &stripe.PaymentIntentParams{
-			Customer:      stripe.String(account.StripeCustomerID),
-			PaymentMethod: stripe.String(body["paymentMethod"]),
-			Amount:        stripe.Int64(int64(amountToCharge)),
-			Currency:      stripe.String(string(stripe.CurrencyRON)),
+			Customer: stripe.String(account.StripeCustomerID),
+			PaymentMethod: stripe.String(
+				account.PaymentMethods[body.PaymentMethod].ID,
+			),
+			Amount:   stripe.Int64(int64(body.Amount)),
+			Currency: stripe.String(string(stripe.CurrencyRON)),
 		}
 		intent, _ := paymentintent.New(params)
 
