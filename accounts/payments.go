@@ -97,7 +97,8 @@ func payments(acc fiber.Router) {
 		intent, _ := paymentintent.New(params)
 
 		return c.JSON(bson.M{
-			"clientSecret": intent.ClientSecret,
+			"clientSecret":  intent.ClientSecret,
+			"paymentIntent": intent.ID,
 		})
 	})
 }

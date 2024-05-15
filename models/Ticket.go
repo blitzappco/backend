@@ -19,6 +19,9 @@ type Ticket struct {
 	Trips  int     `bson:"trips" json:"trips"`
 	Expiry string  `bson:"expiry" json:"expiry"`
 
+	PaymentIntent string `bson:"paymentIntent" json:"paymentIntent"`
+	Confirmed     bool   `bson:"confirmed" json:"confirmed"`
+
 	ExpiresAt time.Time `bson:"expiresAt" json:"expiresAt"`
 	CreatedAt time.Time `bson:"createdAt" json:"createdAt"`
 }
@@ -52,6 +55,14 @@ func GetTicket(ticketID string) (Ticket, error) {
 	return ticket, err
 }
 
+func GetTicketPaymentIntent(paymentIntent string) (Ticket, error) {
+	ticket := Ticket{}
+
+	err := db.Tickets.FindOne(db.Ctx, bson.M{"paymentIntent": paymentIntent}).Decode(&ticket)
+
+	return ticket, err
+}
+
 func ChangeTicket(ticketID string, updates interface{}) (Ticket, error) {
 	ticket := Ticket{}
 
@@ -66,16 +77,19 @@ func ChangeTicket(ticketID string, updates interface{}) (Ticket, error) {
 	return ticket, err
 }
 
-func ConfirmTicket(ticketID string, accountID string) (Ticket, error) {
-	ticket, err := ChangeTicket(ticketID,
-		bson.M{
-			"accountID": accountID,
-		},
-	)
+func ConfirmTicket(paymentIntent string) error {
+	_, err := db.Tickets.
+		UpdateOne(
+			db.Ctx,
+			bson.M{"paymentIntent": paymentIntent},
+			bson.M{
+				"$set": bson.M{
+					"confirmed": true,
+				},
+			},
+		)
 
-	ticket.AccountID = accountID
-
-	return ticket, err
+	return err
 }
 
 func GetLastTicket(accountID string) (Ticket, error) {
@@ -98,12 +112,13 @@ func GetLastTicket(accountID string) (Ticket, error) {
 	return tickets[0], nil
 }
 
-func (ticket *Ticket) Create(tt TicketType) error {
+func (ticket *Ticket) Create(tt TicketType, accountID string) error {
 	ticket.ID = utils.GenID(12)
 
 	now := time.Now().UTC()
 	ticket.CreatedAt = now
 
+	ticket.AccountID = accountID
 	ticket.City = tt.City
 	ticket.Mode = tt.Mode
 	ticket.Fare = tt.Fare
@@ -124,7 +139,7 @@ func Validate(ticketID string) (Ticket, bool, error) {
 		if ticket.ExpiresAt.IsZero() {
 			expiresAt := utils.ConvertExpiry(ticket.Expiry, time.Now().UTC())
 			ticket, err := ChangeTicket(
-				ticketID
+				ticketID,
 				bson.M{
 					"expiresAt": expiresAt,
 				},

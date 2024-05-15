@@ -3,6 +3,8 @@ package tickets
 import (
 	"backend/models"
 	"backend/utils"
+	"fmt"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"go.mongodb.org/mongo-driver/bson"
@@ -10,6 +12,8 @@ import (
 
 func Routes(app *fiber.App) {
 	tickets := app.Group("/tickets")
+
+	purchase(tickets)
 
 	tickets.Get("/types", func(c *fiber.Ctx) error {
 		ticketTypes, err := models.GetTicketTypes("bucuresti")
@@ -20,39 +24,53 @@ func Routes(app *fiber.App) {
 		return c.JSON(ticketTypes)
 	})
 
-	tickets.Post("/purchase-intent", models.AccountMiddleware, func(c *fiber.Ctx) error {
-		typeID := c.Query("typeID")
-		ticketType, err := models.GetTicketType(typeID)
+	tickets.Get("/", models.AccountMiddleware, func(c *fiber.Ctx) error {
+		accountID := fmt.Sprintf("%v", c.Locals("id"))
+
+		tickets, err := models.GetTickets(accountID)
 		if err != nil {
-			return utils.MessageError(c, "Nu s-a putut gasi tipul de bilet")
+			return utils.MessageError(c, "Nu s-au putut gasi biletele")
 		}
 
-		var ticket models.Ticket
-		err = ticket.Create(ticketType)
-		if err != nil {
-			return utils.MessageError(c, "Nu s-a putut crea biletul")
-		}
-
-		return c.JSON(
-			bson.M{
-				"fare":     ticketType.Fare,
-				"ticketID": ticket.ID,
-			},
-		)
+		return c.JSON(tickets)
 	})
 
-	tickets.Post("/purchase-confirm", models.AccountMiddleware, func(c *fiber.Ctx) error {
-		var account models.Account
-		utils.GetLocals(c, "account", &account)
+	tickets.Get("/last", models.AccountMiddleware, func(c *fiber.Ctx) error {
+		accountID := fmt.Sprintf("%v", c.Locals("id"))
 
-		ticketID := c.Query("ticketID")
+		ticket, err := models.GetLastTicket(
+			accountID,
+		)
 
-		ticket, err := models.ConfirmTicket(ticketID, account.ID)
 		if err != nil {
 			return utils.MessageError(c, "Nu s-a putut gasi biletul")
 		}
 
-		return c.JSON(ticket)
+		show := false
+
+		// see if it should actually show it
+		if ticket.Trips < 0 { // it's a pass, show it if it is still available
+			if ticket.ExpiresAt.After(time.Now().UTC()) {
+				show = true
+			}
+		} else { // it's a ticket, we'll have to see the number of trips left
+			if ticket.Trips > 0 {
+				show = true
+			} else {
+				if ticket.ExpiresAt.After(time.Now().UTC()) {
+					show = true
+				}
+			}
+		}
+
+		if !ticket.Confirmed {
+			show = false
+		}
+
+		return c.JSON(bson.M{
+			"ticket": ticket,
+			"show":   show,
+		})
 	})
 
 	tickets.Post("/validate", models.AccountMiddleware, func(c *fiber.Ctx) error {

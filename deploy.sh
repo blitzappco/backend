@@ -6,6 +6,10 @@ ssh -i ~/coding/aws/yogabuntu.pem ubuntu@backend.blitzapp.co "sudo service blitz
 
 echo "Stopped the service!"
 
+echo "Recompilling the code..."
+go build -o backend
+echo "Recompilled the code!"
+
 echo "Uploading the new binary..."
 scp -i ~/coding/aws/yogabuntu.pem backend ubuntu@backend.blitzapp.co:~/
 
