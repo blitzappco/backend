@@ -101,8 +101,8 @@ func GetLastTicket(accountID string) (Ticket, error) {
 func (ticket *Ticket) Create(tt TicketType) error {
 	ticket.ID = utils.GenID(12)
 
-	loc, _ := time.LoadLocation("Europe/Bucharest")
-	ticket.CreatedAt = time.Now().In(loc)
+	now := time.Now().UTC()
+	ticket.CreatedAt = now
 
 	ticket.City = tt.City
 	ticket.Mode = tt.Mode
@@ -112,4 +112,55 @@ func (ticket *Ticket) Create(tt TicketType) error {
 
 	_, err := db.Tickets.InsertOne(db.Ctx, ticket)
 	return err
+}
+
+func Validate(ticketID string) (Ticket, bool, error) {
+	ticket, err := GetTicket(ticketID)
+	if err != nil {
+		return ticket, false, err
+	}
+
+	if ticket.Trips < 0 { // it is a pass
+		if ticket.ExpiresAt.IsZero() {
+			expiresAt := utils.ConvertExpiry(ticket.Expiry, time.Now().UTC())
+			ticket, err := ChangeTicket(
+				ticketID
+				bson.M{
+					"expiresAt": expiresAt,
+				},
+			)
+			ticket.ExpiresAt = expiresAt
+
+			return ticket, true, err
+		} else {
+			if ticket.ExpiresAt.After(time.Now()) {
+				return ticket, true, err
+			} else {
+				return ticket, false, err
+			}
+		}
+	} else { // it is a ticket
+		if ticket.ExpiresAt.After(time.Now()) {
+			return ticket, true, err
+		} else {
+			if ticket.Trips > 0 {
+				expiresAt := utils.ConvertExpiry(ticket.Expiry, time.Now())
+				trips := ticket.Trips - 1
+				ticket, err := ChangeTicket(
+					ticketID,
+					bson.M{
+						"expiresAt": expiresAt,
+						"trips":     trips,
+					},
+				)
+
+				ticket.ExpiresAt = expiresAt
+				ticket.Trips = trips
+
+				return ticket, true, err
+			} else {
+				return ticket, false, err
+			}
+		}
+	}
 }

@@ -54,4 +54,22 @@ func Routes(app *fiber.App) {
 
 		return c.JSON(ticket)
 	})
+
+	tickets.Post("/validate", models.AccountMiddleware, func(c *fiber.Ctx) error {
+		ticketID := c.Query("ticketID")
+
+		var ticket models.Ticket
+		ticket, valid, err := models.Validate(ticketID)
+
+		if err != nil {
+			return utils.MessageError(c, err.Error())
+		}
+
+		return c.JSON(
+			bson.M{
+				"ticket": ticket,
+				"valid":  valid,
+			},
+		)
+	})
 }
