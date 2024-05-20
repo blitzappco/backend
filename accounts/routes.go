@@ -7,4 +7,5 @@ func Routes(app *fiber.App) {
 
 	onboarding(acc)
 	payments(acc)
+	trips(acc)
 }

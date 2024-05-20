@@ -15,12 +15,14 @@ import (
 )
 
 type Account struct {
-	ID               string          `bson:"id" json:"id"`
-	Phone            string          `bson:"phone" json:"phone"`
-	FirstName        string          `bson:"firstName" json:"firstName"`
-	LastName         string          `bson:"lastName" json:"lastName"`
-	StripeCustomerID string          `bson:"stripeCustomerID" json:"stripeCustomerID"`
-	PaymentMethods   []PaymentMethod `bson:"paymentMethods" json:"paymentMethods"`
+	ID               string `bson:"id" json:"id"`
+	Phone            string `bson:"phone" json:"phone"`
+	FirstName        string `bson:"firstName" json:"firstName"`
+	LastName         string `bson:"lastName" json:"lastName"`
+	StripeCustomerID string `bson:"stripeCustomerID" json:"stripeCustomerID"`
+
+	PaymentMethods []PaymentMethod `bson:"paymentMethods" json:"paymentMethods"`
+	Trips          []Trip          `bson:"trips" json:"trips"`
 }
 
 type PaymentMethod struct {
@@ -28,6 +30,13 @@ type PaymentMethod struct {
 	Type  string `bson:"type" json:"type"`
 	Icon  string `bson:"icon" json:"icon"`
 	Title string `bson:"title" json:"title"`
+}
+
+type Trip struct {
+	PlaceID       string `bson:"placeID" json:"placeID"`
+	MainText      string `bson:"mainText" json:"mainText"`
+	SecondaryText string `bson:"secondaryText" json:"secondaryText"`
+	Type          string `bson:"type" json:"type"`
 }
 
 func (account Account) GenAccountToken() string {
@@ -163,4 +172,30 @@ func CheckAccount(phone string) (bool, Account) {
 	} else {
 		return true, account
 	}
+}
+
+func AddTrip(accountID string, trip Trip) (Account, error) {
+	account, err := GetAccount(bson.M{
+		"id": accountID,
+	})
+
+	if err != nil {
+		return account, err
+	}
+
+	newTrips := append(account.Trips, trip)
+	if len(newTrips) > 10 {
+		newTrips = newTrips[1:]
+	}
+
+	err = UpdateAccount(accountID, bson.M{
+		"trips": newTrips,
+	})
+
+	if err != nil {
+		return account, err
+	}
+
+	account.Trips = newTrips
+	return account, err
 }
