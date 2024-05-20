@@ -4,6 +4,7 @@ import (
 	"backend/models"
 	"backend/utils"
 	"encoding/json"
+	"fmt"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/stripe/stripe-go/v78/customer"
@@ -16,6 +17,23 @@ import (
 
 func payments(acc fiber.Router) {
 	payments := acc.Group("/payments")
+
+	payments.Get("/methods", models.AccountMiddleware, func(c *fiber.Ctx) error {
+		accountID := fmt.Sprintf("%v", c.Locals("id"))
+
+		account, err := models.GetAccount(
+			bson.M{
+				"id": accountID,
+			},
+		)
+
+		if err != nil {
+			return utils.MessageError(c, err.Error())
+		}
+
+		return c.JSON(account.PaymentMethods)
+	})
+
 	payments.Post("/setup-intent", models.AccountMiddleware, func(c *fiber.Ctx) error {
 		var account models.Account
 		utils.GetLocals(c, "account", &account)
@@ -72,10 +90,9 @@ func payments(acc fiber.Router) {
 	})
 
 	payments.Post("/payment-intent", models.AccountMiddleware, func(c *fiber.Ctx) error {
-		var account models.Account
-		utils.GetLocals(c, "account", &account)
+		accountID := fmt.Sprintf("%v", c.Locals("id"))
 
-		account, err := models.GetAccount(bson.M{"id": account.ID})
+		account, err := models.GetAccount(bson.M{"id": accountID})
 		if err != nil {
 			return utils.MessageError(c, "Nu s-a putut gasi contul")
 		}
