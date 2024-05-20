@@ -102,15 +102,19 @@ func GetLastTicket(accountID string, city string) (Ticket, error) {
 			SetSort(bson.M{"createdAt": -1}))
 
 	if err != nil {
-		return tickets[0], err
+		return Ticket{}, err
 	}
 
 	err = cursor.All(db.Ctx, &tickets)
 	if err != nil {
-		return tickets[0], err
+		return Ticket{}, err
 	}
 
-	return tickets[0], nil
+	if len(tickets) != 0 {
+		return tickets[0], nil
+	} else {
+		return Ticket{}, nil
+	}
 }
 
 func (ticket *Ticket) Create(tt TicketType, accountID string) error {
@@ -234,6 +238,6 @@ func bucharestCheck(ticket Ticket) bool {
 	return show
 }
 
-func ploiestiCheck(ticket Ticket) bool {
+func ploiestiCheck(_ Ticket) bool {
 	return false
 }

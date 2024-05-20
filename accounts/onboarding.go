@@ -83,7 +83,6 @@ func onboarding(acc fiber.Router) {
 			account.ID,
 			bson.M{
 				"phone": phone,
-				// "stripeCustomerID": account.StripeCustomerID,
 			},
 		)
 		if err != nil {
