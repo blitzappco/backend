@@ -4,7 +4,6 @@ import (
 	"backend/models"
 	"backend/utils"
 	"fmt"
-	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"go.mongodb.org/mongo-driver/bson"
@@ -16,7 +15,9 @@ func Routes(app *fiber.App) {
 	purchase(tickets)
 
 	tickets.Get("/types", func(c *fiber.Ctx) error {
-		ticketTypes, err := models.GetTicketTypes("bucuresti")
+		city := c.Query("city")
+
+		ticketTypes, err := models.GetTicketTypes(city)
 		if err != nil {
 			return utils.MessageError(c, "Nu s-au putut gasi tipurile de bilete")
 		}
@@ -37,35 +38,18 @@ func Routes(app *fiber.App) {
 
 	tickets.Get("/last", models.AccountMiddleware, func(c *fiber.Ctx) error {
 		accountID := fmt.Sprintf("%v", c.Locals("id"))
+		city := c.Query("city")
 
 		ticket, err := models.GetLastTicket(
 			accountID,
+			city,
 		)
 
 		if err != nil {
 			return utils.MessageError(c, "Nu s-a putut gasi biletul")
 		}
 
-		show := false
-
-		// see if it should actually show it
-		if ticket.Trips < 0 { // it's a pass, show it if it is still available
-			if ticket.ExpiresAt.After(time.Now().UTC()) {
-				show = true
-			}
-		} else { // it's a ticket, we'll have to see the number of trips left
-			if ticket.Trips > 0 {
-				show = true
-			} else {
-				if ticket.ExpiresAt.After(time.Now().UTC()) {
-					show = true
-				}
-			}
-		}
-
-		if !ticket.Confirmed {
-			show = false
-		}
+		show := models.CheckValidity(ticket)
 
 		return c.JSON(bson.M{
 			"ticket": ticket,

@@ -3,6 +3,7 @@ package models
 import (
 	"backend/db"
 	"backend/utils"
+	"errors"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -92,11 +93,11 @@ func ConfirmTicket(paymentIntent string) error {
 	return err
 }
 
-func GetLastTicket(accountID string) (Ticket, error) {
+func GetLastTicket(accountID string, city string) (Ticket, error) {
 	tickets := []Ticket{}
 
 	cursor, err := db.Tickets.Find(db.Ctx,
-		bson.M{"accountID": accountID},
+		bson.M{"accountID": accountID, "city": city},
 		options.Find().SetLimit(1).
 			SetSort(bson.M{"createdAt": -1}))
 
@@ -135,11 +136,28 @@ func Validate(ticketID string) (Ticket, bool, error) {
 		return ticket, false, err
 	}
 
+	switch ticket.City {
+	case "bucuresti":
+		return bucharestValidate(ticket)
+	case "ploiesti":
+		return ploiestiValidate(ticket)
+	default:
+		return ticket, false, errors.New("acest bilet sau abonament nu poate fi inregistrat in sistem")
+	}
+
+}
+
+func ploiestiValidate(ticket Ticket) (Ticket, bool, error) {
+	return ticket, false, nil
+}
+
+func bucharestValidate(ticket Ticket) (Ticket, bool, error) {
+	var err error
 	if ticket.Trips < 0 { // it is a pass
 		if ticket.ExpiresAt.IsZero() {
 			expiresAt := utils.ConvertExpiry(ticket.Expiry, time.Now().UTC())
 			ticket, err := ChangeTicket(
-				ticketID,
+				ticket.ID,
 				bson.M{
 					"expiresAt": expiresAt,
 				},
@@ -162,7 +180,7 @@ func Validate(ticketID string) (Ticket, bool, error) {
 				expiresAt := utils.ConvertExpiry(ticket.Expiry, time.Now())
 				trips := ticket.Trips - 1
 				ticket, err := ChangeTicket(
-					ticketID,
+					ticket.ID,
 					bson.M{
 						"expiresAt": expiresAt,
 						"trips":     trips,
@@ -178,4 +196,44 @@ func Validate(ticketID string) (Ticket, bool, error) {
 			}
 		}
 	}
+}
+
+func CheckValidity(ticket Ticket) bool {
+	switch ticket.City {
+	case "bucuresti":
+		return bucharestCheck(ticket)
+	case "ploiesti":
+		return ploiestiCheck(ticket)
+	default:
+		return false
+	}
+}
+
+func bucharestCheck(ticket Ticket) bool {
+	show := false
+
+	// see if it should actually show it
+	if ticket.Trips < 0 { // it's a pass, show it if it is still available
+		if ticket.ExpiresAt.After(time.Now().UTC()) {
+			show = true
+		}
+	} else { // it's a ticket, we'll have to see the number of trips left
+		if ticket.Trips > 0 {
+			show = true
+		} else {
+			if ticket.ExpiresAt.After(time.Now().UTC()) {
+				show = true
+			}
+		}
+	}
+
+	if !ticket.Confirmed {
+		show = false
+	}
+
+	return show
+}
+
+func ploiestiCheck(ticket Ticket) bool {
+	return false
 }
