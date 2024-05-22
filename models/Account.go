@@ -69,7 +69,14 @@ func AccountMiddleware(c *fiber.Ctx) error {
 	authHeader := c.Get("Authorization")
 
 	if string(authHeader) != "" && strings.HasPrefix(string(authHeader), "Bearer") {
-		token = strings.Fields(string(authHeader))[1]
+
+		tokens := strings.Fields(string(authHeader))
+		if len(tokens) == 2 {
+			token = tokens[1]
+		}
+		if token == "" {
+			return utils.MessageError(c, "no token")
+		}
 
 		account, err := ParseAccountToken(token)
 		if err != nil {

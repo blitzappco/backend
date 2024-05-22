@@ -25,6 +25,18 @@ func Routes(app *fiber.App) {
 		return c.JSON(ticketTypes)
 	})
 
+	tickets.Get("/ticket", func(c *fiber.Ctx) error {
+		ticket, err := models.GetTicket(
+			fmt.Sprintf("%v", c.Query("ticketID")),
+		)
+
+		if err != nil {
+			return utils.MessageError(c, err.Error())
+		}
+
+		return c.JSON(ticket)
+	})
+
 	tickets.Get("/", models.AccountMiddleware, func(c *fiber.Ctx) error {
 		accountID := fmt.Sprintf("%v", c.Locals("id"))
 
