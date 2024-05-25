@@ -13,6 +13,10 @@ import (
 
 func purchase(tickets fiber.Router) {
 	tickets.Post("/purchase-intent", models.AccountMiddleware, func(c *fiber.Ctx) error {
+
+		var body map[string]string
+		json.Unmarshal(c.Body(), &body)
+
 		typeID := c.Query("typeID")
 		ticketType, err := models.GetTicketType(typeID)
 		if err != nil {
@@ -23,7 +27,7 @@ func purchase(tickets fiber.Router) {
 		utils.GetLocals(c, "account", &account)
 
 		var ticket models.Ticket
-		err = ticket.Create(ticketType, account.ID)
+		err = ticket.Create(ticketType, account.ID, body["name"])
 		if err != nil {
 			return utils.MessageError(c, "Nu s-a putut crea biletul")
 		}

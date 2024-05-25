@@ -14,6 +14,7 @@ type Ticket struct {
 	ID        string `bson:"id" json:"id"`
 	AccountID string `bson:"accountID" json:"accountID"`
 	City      string `bson:"city" json:"city"`
+	Name      string `bson:"name" json:"name"`
 
 	Mode   string `bson:"mode" json:"mode"`
 	Fare   int    `bson:"fare" json:"fare"`
@@ -117,12 +118,13 @@ func GetLastTicket(accountID string, city string) (Ticket, error) {
 	}
 }
 
-func (ticket *Ticket) Create(tt TicketType, accountID string) error {
+func (ticket *Ticket) Create(tt TicketType, accountID string, name string) error {
 	ticket.ID = utils.GenID(12)
 
 	now := time.Now().UTC()
 	ticket.CreatedAt = now
 
+	ticket.Name = name
 	ticket.AccountID = accountID
 	ticket.City = tt.City
 	ticket.Mode = tt.Mode
