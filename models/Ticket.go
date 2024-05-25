@@ -31,6 +31,7 @@ type Ticket struct {
 func GetTickets(accountID string) ([]Ticket, error) {
 	cursor, err := db.Tickets.Find(db.Ctx, bson.M{
 		"accountID": accountID,
+		"confirmed": true,
 	})
 
 	if err != nil {
