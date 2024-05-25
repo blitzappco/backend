@@ -15,10 +15,10 @@ type Ticket struct {
 	AccountID string `bson:"accountID" json:"accountID"`
 	City      string `bson:"city" json:"city"`
 
-	Mode   string  `bson:"mode" json:"mode"`
-	Fare   float64 `bson:"fare" json:"fare"`
-	Trips  int     `bson:"trips" json:"trips"`
-	Expiry string  `bson:"expiry" json:"expiry"`
+	Mode   string `bson:"mode" json:"mode"`
+	Fare   int    `bson:"fare" json:"fare"`
+	Trips  int    `bson:"trips" json:"trips"`
+	Expiry string `bson:"expiry" json:"expiry"`
 
 	PaymentIntent string `bson:"paymentIntent" json:"paymentIntent"`
 	Confirmed     bool   `bson:"confirmed" json:"confirmed"`
@@ -113,7 +113,7 @@ func GetLastTicket(accountID string, city string) (Ticket, error) {
 	if len(tickets) != 0 {
 		return tickets[0], nil
 	} else {
-		return Ticket{}, nil
+		return Ticket{Fare: 0.0}, nil
 	}
 }
 
@@ -218,7 +218,9 @@ func bucharestCheck(ticket Ticket) bool {
 
 	// see if it should actually show it
 	if ticket.Trips < 0 { // it's a pass, show it if it is still available
-		if ticket.ExpiresAt.After(time.Now().UTC()) {
+		if ticket.ExpiresAt.IsZero() {
+			show = true
+		} else if ticket.ExpiresAt.After(time.Now().UTC()) {
 			show = true
 		}
 	} else { // it's a ticket, we'll have to see the number of trips left

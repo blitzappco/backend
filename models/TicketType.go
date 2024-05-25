@@ -10,10 +10,10 @@ type TicketType struct {
 	ID   string `bson:"id" json:"id"`
 	City string `bson:"city" json:"city"`
 
-	Mode   string  `bson:"mode" json:"mode"`
-	Fare   float64 `bson:"fare" json:"fare"`
-	Trips  int     `bson:"trips" json:"trips"`
-	Expiry string  `bson:"expiry" json:"expiry"`
+	Mode   string `bson:"mode" json:"mode"`
+	Fare   int    `bson:"fare" json:"fare"`
+	Trips  int    `bson:"trips" json:"trips"`
+	Expiry string `bson:"expiry" json:"expiry"`
 }
 
 func GetTicketTypes(city string) ([]TicketType, error) {
